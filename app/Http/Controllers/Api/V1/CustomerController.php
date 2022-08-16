@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use \Illuminate\Http\Request;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\UpdateCustomerRequest;
 use App\Models\Customer;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
 use App\Http\Resources\CustomerCollection;
-use App\Http\Services\V1\
+use App\Filters\V1\CustomerFilter;
 
 
 class CustomerController extends Controller
@@ -18,9 +19,21 @@ class CustomerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index( Request $request )
     {
-        return new CustomerCollection(Customer::paginate());
+        $filter = new CustomerFilter();
+        $filterItems = $filter -> transform($request); // [['column', 'operator', 'value']]
+        $customers = Customer::where($filterItems);
+
+        $includeInvoices = $request->query('includeInvoices');
+
+        if ( $includeInvoices ){
+            $customers = $customers->with('invoices');
+        }
+
+
+        return new CustomerCollection( $customers->paginate()->appends($request-> query()) );
+
     }
 
     /**
@@ -41,7 +54,7 @@ class CustomerController extends Controller
      */
     public function store(StoreCustomerRequest $request)
     {
-        //
+        return new CustomerResource( Customer::create( $request->all() ) );
     }
 
     /**
@@ -50,8 +63,15 @@ class CustomerController extends Controller
      * @param  \App\Models\Customer  $customer
      * @return \Illuminate\Http\Response
      */
-    public function show(Customer $customer)
+    public function show( Request $request, Customer $customer)
     {
+        $includeInvoices = $request->query('includeInvoices');
+
+        if ( $includeInvoices ){
+            $customer = $customer->loadMissing('invoices');
+        }
+
+
         return new CustomerResource($customer);
     }
 
@@ -75,7 +95,7 @@ class CustomerController extends Controller
      */
     public function update(UpdateCustomerRequest $request, Customer $customer)
     {
-        //
+        $customer -> update($request->all());
     }
 
     /**

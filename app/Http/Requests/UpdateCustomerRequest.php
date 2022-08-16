@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
 
 class UpdateCustomerRequest extends FormRequest
 {
@@ -13,8 +15,8 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
-    }
+        $user = $this->user();
+        return $user !== null && $user->tokenCan('update');    }
 
     /**
      * Get the validation rules that apply to the request.
@@ -23,8 +25,37 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            //
-        ];
+        $method = $this->method();
+
+        if ($method == 'PUT'){
+            return [
+                'name' => ['required'],
+                'type' => ['required', Rule::in(['I', 'B', 'i', 'b'])],
+                'email' => ['required', 'email'],
+                'adress' => ['required'],
+                'city' => ['required'],
+                'state' => ['required'],
+                'postalCode' => ['required'],
+            ];
+        }
+        else{
+            return [
+                'name' => ['sometimes', 'required'],
+                'type' => ['sometimes', 'required', Rule::in(['I', 'B', 'i', 'b'])],
+                'email' => ['sometimes', 'required', 'email'],
+                'adress' => ['sometimes', 'required'],
+                'city' => ['sometimes', 'required'],
+                'state' => ['sometimes', 'required'],
+                'postalCode' => ['sometimes', 'required'],
+            ];
+        }
+    }
+
+    protected function prepareForValidation(){
+        if ( $this->postalCode ){
+            $this->merge([
+                'postal_code' => $this->postalCode
+            ]);
+        }
     }
 }
